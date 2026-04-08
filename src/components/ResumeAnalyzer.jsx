@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './ResumeAnalyzer.css'
 
-function ResumeAnalyzer() {
+function ResumeAnalyzer({ sessionId }) {
   const [resumeText, setResumeText] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [results, setResults] = useState(null)
@@ -21,7 +21,7 @@ function ResumeAnalyzer() {
       const res = await fetch('/api/resume/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeText })
+        body: JSON.stringify({ resumeText, sessionId })
       })
 
       const data = await res.json()

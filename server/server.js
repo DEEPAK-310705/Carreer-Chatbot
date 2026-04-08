@@ -4,14 +4,22 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import connectDB, { isDBConnected } from './db/connection.js';
 import chatRouter from './routes/chat.js';
 import resumeRouter from './routes/resume.js';
+import conversationsRouter from './routes/conversations.js';
+import usersRouter from './routes/users.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// ---------------------
+// Database Connection
+// ---------------------
+await connectDB();
 
 // ---------------------
 // Middleware
@@ -22,7 +30,7 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? false  // same-origin in production (served from same server)
     : ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'],
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type']
 }));
 
@@ -46,6 +54,8 @@ app.use('/api', apiLimiter);
 
 app.use('/api/chat', chatRouter);
 app.use('/api/resume', resumeRouter);
+app.use('/api/conversations', conversationsRouter);
+app.use('/api/users', usersRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -53,7 +63,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    apiKeyConfigured: keyConfigured
+    apiKeyConfigured: keyConfigured,
+    databaseConnected: isDBConnected()
   });
 });
 
@@ -79,10 +90,14 @@ if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`\n🚀 CareerBot Server running on http://localhost:${PORT}`);
     console.log(`📡 API endpoints:`);
-    console.log(`   POST /api/chat          — AI chat`);
-    console.log(`   POST /api/resume/analyze — Resume analysis`);
-    console.log(`   GET  /api/health        — Health check`);
+    console.log(`   POST /api/chat              — AI chat`);
+    console.log(`   POST /api/resume/analyze     — Resume analysis`);
+    console.log(`   GET  /api/conversations      — List conversations`);
+    console.log(`   POST /api/conversations      — Create conversation`);
+    console.log(`   POST /api/users/session       — User session`);
+    console.log(`   GET  /api/health             — Health check`);
     console.log(`\n🔑 API Key: ${process.env.GEMINI_API_KEY ? '✓ Configured' : '✗ NOT SET — add GEMINI_API_KEY to .env'}`);
+    console.log(`🗄️  Database: ${isDBConnected() ? '✓ Connected' : '✗ NOT CONNECTED — add MONGODB_URI to .env'}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
   });
 }

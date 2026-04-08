@@ -9,94 +9,114 @@ function CareerQuiz({ onDiscussWithAI }) {
 
   const questions = [
     {
-      question: 'What type of work environment excites you most?',
-      icon: '🏢',
+      question: 'When faced with a complex software problem, what is your first instinct?',
+      icon: '🧠',
       options: [
-        { text: 'Fast-paced startup culture', icon: '🚀', tags: ['tech', 'business'] },
-        { text: 'Structured corporate setting', icon: '🏛️', tags: ['finance', 'business'] },
-        { text: 'Creative open studio', icon: '🎨', tags: ['creative', 'education'] },
-        { text: 'Helping people directly', icon: '❤️', tags: ['healthcare', 'education'] }
+        { text: 'Optimize the Time & Space Complexity (O(n), O(1))', icon: '⏱️', tags: ['backend', 'data'] },
+        { text: 'Sketch out how the user will interact with it', icon: '🎨', tags: ['frontend', 'product'] },
+        { text: 'Look for patterns in historical data to solve it', icon: '📊', tags: ['data'] },
+        { text: 'Check if the underlying servers and network can handle it', icon: '☁️', tags: ['devops', 'cyber'] }
       ]
     },
     {
-      question: 'Which activity do you enjoy the most?',
-      icon: '💡',
+      question: 'Which Data Structures & Algorithms topic do you find most interesting?',
+      icon: '🧮',
       options: [
-        { text: 'Solving complex puzzles & coding', icon: '💻', tags: ['tech'] },
-        { text: 'Analyzing data & making projections', icon: '📊', tags: ['finance', 'tech'] },
-        { text: 'Designing and creating visual content', icon: '🎬', tags: ['creative'] },
-        { text: 'Teaching and mentoring others', icon: '📚', tags: ['education', 'healthcare'] }
+        { text: 'Dynamic Programming & Graph Traversal', icon: '🕸️', tags: ['backend', 'data'] },
+        { text: 'Arrays, Strings & DOM Manipulation', icon: '🔠', tags: ['frontend'] },
+        { text: 'Probability, Statistics & Matrix Math', icon: '📈', tags: ['data'] },
+        { text: 'Cryptography, Hashing & Network Trees', icon: '🔐', tags: ['cyber', 'backend'] }
       ]
     },
     {
-      question: 'What matters most in your career?',
-      icon: '⭐',
+      question: 'What aspect of a technical project excites you the most?',
+      icon: '🔥',
       options: [
-        { text: 'High salary & financial growth', icon: '💰', tags: ['finance', 'tech'] },
-        { text: 'Work-life balance & flexibility', icon: '⚖️', tags: ['education', 'creative'] },
-        { text: 'Making a meaningful impact', icon: '🌍', tags: ['healthcare', 'education'] },
-        { text: 'Innovation & cutting-edge work', icon: '🔬', tags: ['tech', 'creative'] }
+        { text: 'Designing robust APIs and database schemas', icon: '🗄️', tags: ['backend'] },
+        { text: 'Crafting pixel-perfect, interactive user interfaces', icon: '✨', tags: ['frontend'] },
+        { text: 'Automating deployments and scaling infrastructure', icon: '🚀', tags: ['devops'] },
+        { text: 'Defining the product roadmap and business strategy', icon: '📋', tags: ['product'] }
       ]
     },
     {
-      question: 'How do you prefer to communicate?',
-      icon: '💬',
+      question: 'Choose a weekend personal project:',
+      icon: '💻',
       options: [
-        { text: 'Writing detailed reports & docs', icon: '📝', tags: ['business', 'finance'] },
-        { text: 'Presenting ideas to groups', icon: '🎤', tags: ['business', 'education'] },
-        { text: 'Visual storytelling & demos', icon: '🖼️', tags: ['creative', 'tech'] },
-        { text: 'One-on-one conversations', icon: '🤝', tags: ['healthcare', 'education'] }
+        { text: 'Building a real-time chat server with WebSockets', icon: '🔌', tags: ['backend', 'devops'] },
+        { text: 'Cloning the UI of a famous app using React/Tailwind', icon: '📱', tags: ['frontend'] },
+        { text: 'Scraping Twitter data to run sentiment analysis', icon: '🐦', tags: ['data'] },
+        { text: 'Setting up a secure home server/Raspberry Pi lab', icon: '🖥️', tags: ['cyber', 'devops'] }
       ]
     },
     {
-      question: 'What is your ideal team size?',
-      icon: '👥',
+      question: 'How do you prefer to handle data in applications?',
+      icon: '📂',
       options: [
-        { text: 'Solo — I work best alone', icon: '🧑', tags: ['creative', 'tech'] },
-        { text: 'Small team (2-5 people)', icon: '👫', tags: ['tech', 'creative'] },
-        { text: 'Medium team (5-20 people)', icon: '👨‍👩‍👧‍👦', tags: ['business', 'healthcare'] },
-        { text: 'Large organization (20+ people)', icon: '🏢', tags: ['finance', 'business'] }
+        { text: 'Writing complex SQL joins and transactions', icon: '🛢️', tags: ['backend'] },
+        { text: 'Fetching and managing state using Redux/Context', icon: '🔄', tags: ['frontend'] },
+        { text: 'Cleaning huge datasets using Pandas or PySpark', icon: '🧹', tags: ['data'] },
+        { text: 'Encrypting data in transit and at rest', icon: '🛡️', tags: ['cyber'] }
       ]
     },
     {
-      question: 'Which skill do you want to develop most?',
+      question: 'What kind of technical articles or blogs do you naturally gravitate towards?',
+      icon: '📖',
+      options: [
+        { text: 'System Design and High-level Architecture', icon: '🏗️', tags: ['backend', 'product'] },
+        { text: 'CSS Tricks, Animations, and Web Accessibility', icon: '♿', tags: ['frontend'] },
+        { text: 'New Machine Learning models (LLMs, Transformers)', icon: '🤖', tags: ['data'] },
+        { text: 'Zero-day vulnerabilities and Ethical Hacking', icon: '🕵️', tags: ['cyber'] }
+      ]
+    },
+    {
+      question: 'Your app is running slow. How do you optimize it?',
+      icon: '⚡',
+      options: [
+        { text: 'Add Redis caching and optimize database indexes', icon: '💾', tags: ['backend'] },
+        { text: 'Implement code-splitting and lazy-load images', icon: '🖼️', tags: ['frontend'] },
+        { text: 'Add load balancers and auto-scaling groups', icon: '⚖️', tags: ['devops'] },
+        { text: 'Optimize the ML inference code for GPUs', icon: '🎮', tags: ['data'] }
+      ]
+    },
+    {
+      question: 'Which tools are you most comfortable opening on a Monday morning?',
+      icon: '🛠️',
+      options: [
+        { text: 'Postman, Docker, and a heavy IDE (IntelliJ/VS Code)', icon: '⚙️', tags: ['backend', 'devops'] },
+        { text: 'Figma, VS Code, and Chrome DevTools', icon: '🎨', tags: ['frontend', 'product'] },
+        { text: 'Jupyter Notebooks, Google Colab, and Python', icon: '📓', tags: ['data'] },
+        { text: 'Linux Terminal, Wireshark, and AWS Console', icon: '🐧', tags: ['cyber', 'devops'] }
+      ]
+    },
+    {
+      question: 'If you could master one skill instantly Matrix-style, what would it be?',
+      icon: '💊',
+      options: [
+        { text: 'Advanced Graph Algorithms & Distributed Systems', icon: '🕸️', tags: ['backend'] },
+        { text: 'Advanced 3D WebGL Animations & Framer Motion', icon: '🌀', tags: ['frontend'] },
+        { text: 'Deep Learning Mathematics & Calculus', icon: '∑', tags: ['data'] },
+        { text: 'Penetration Testing & Reverse Engineering', icon: '🔓', tags: ['cyber'] }
+      ]
+    },
+    {
+      question: 'Where do you see yourself making the biggest impact in 3 years?',
       icon: '🎯',
       options: [
-        { text: 'Programming & AI', icon: '🤖', tags: ['tech'] },
-        { text: 'Leadership & management', icon: '👑', tags: ['business', 'finance'] },
-        { text: 'Artistic & design thinking', icon: '🎭', tags: ['creative'] },
-        { text: 'Empathy & patient care', icon: '💝', tags: ['healthcare', 'education'] }
-      ]
-    },
-    {
-      question: 'How do you handle challenges?',
-      icon: '💪',
-      options: [
-        { text: 'Break it down logically step by step', icon: '🧩', tags: ['tech', 'finance'] },
-        { text: 'Brainstorm creative solutions', icon: '🌟', tags: ['creative', 'business'] },
-        { text: 'Research best practices & data', icon: '📖', tags: ['finance', 'education'] },
-        { text: 'Collaborate and seek diverse input', icon: '🤝', tags: ['healthcare', 'business'] }
-      ]
-    },
-    {
-      question: 'Where do you see yourself in 5 years?',
-      icon: '🔮',
-      options: [
-        { text: 'Leading a tech team or startup', icon: '🦄', tags: ['tech', 'business'] },
-        { text: 'Managing investments or a firm', icon: '🏦', tags: ['finance'] },
-        { text: 'Running a creative agency or studio', icon: '🎬', tags: ['creative'] },
-        { text: 'Making a difference in communities', icon: '🌱', tags: ['healthcare', 'education'] }
+        { text: 'Architecting scalable systems that handle millions of users', icon: '🌍', tags: ['backend', 'devops'] },
+        { text: 'Building gorgeous apps that users fall in love with', icon: '❤️', tags: ['frontend'] },
+        { text: 'Leading agile teams and defining product vision', icon: '👑', tags: ['product'] },
+        { text: 'Protecting user data and predicting AI trends', icon: '🛡️', tags: ['cyber', 'data'] }
       ]
     }
   ]
 
   const careerProfiles = {
-    tech: { name: 'Technology & Engineering', icon: '💻', color: '#00d4ff', desc: 'Software Development, AI/ML, Data Science' },
-    finance: { name: 'Finance & Analytics', icon: '💰', color: '#f59e0b', desc: 'Investment, FinTech, Financial Analysis' },
-    creative: { name: 'Creative & Design', icon: '🎨', color: '#ec4899', desc: 'UX/UI Design, Content Creation, Branding' },
-    healthcare: { name: 'Healthcare & Wellness', icon: '🏥', color: '#22c55e', desc: 'Medical, Biotech, Health Informatics' },
-    education: { name: 'Education & Training', icon: '📚', color: '#7c3aed', desc: 'Teaching, EdTech, Curriculum Design' },
-    business: { name: 'Business & Consulting', icon: '📈', color: '#ef4444', desc: 'Management, Strategy, Consulting' }
+    backend: { name: 'Backend / SDE Role', icon: '⚙️', color: '#3b82f6', desc: 'Focus on APIs, Databases, System Design, and heavy DSA application.' },
+    frontend: { name: 'Frontend / UI Engineer', icon: '✨', color: '#10b981', desc: 'Focus on React, CSS, User Experience, and creating interactive interfaces.' },
+    data: { name: 'Data Scientist / AI Engineer', icon: '🤖', color: '#f59e0b', desc: 'Focus on Python, Machine Learning, Analytics, and Data processing.' },
+    devops: { name: 'DevOps / Cloud Engineer', icon: '☁️', color: '#8b5cf6', desc: 'Focus on AWS/Azure, Docker, Kubernetes, and scaling infrastructure.' },
+    cyber: { name: 'Cybersecurity Analyst', icon: '🛡️', color: '#ef4444', desc: 'Focus on ethical hacking, network security, and cryptography.' },
+    product: { name: 'Product Manager (PM)', icon: '📋', color: '#ec4899', desc: 'Focus on strategy, agile management, business, and bridging tech with users.' }
   }
 
   const handleSelect = (optionIdx) => {
@@ -111,7 +131,7 @@ function CareerQuiz({ onDiscussWithAI }) {
       } else {
         setShowResults(true)
       }
-    }, 400)
+    }, 450)
   }
 
   const getResults = () => {
@@ -142,7 +162,7 @@ function CareerQuiz({ onDiscussWithAI }) {
 
   const handleDiscuss = () => {
     const results = getResults()
-    const msg = `Based on my career quiz results, my top career matches are:\n${results.map((r, i) => `${i + 1}. ${r.name} (${r.percentage}% match) - ${r.desc}`).join('\n')}\n\nCan you give me detailed advice on pursuing these career paths, including required skills, certifications, and next steps?`
+    const msg = `Based on the Technical Placement Quiz, my top domain matches are:\n${results.map((r, i) => `${i + 1}. ${r.name} (${r.percentage}% match) - ${r.desc}`).join('\n')}\n\nGiven this profile, can you outline a 3-month preparation plan focusing on specific DSA topics, tech stack, and portfolio projects to crack interviews for these roles?`
     if (onDiscussWithAI) onDiscussWithAI(msg)
   }
 
@@ -153,9 +173,9 @@ function CareerQuiz({ onDiscussWithAI }) {
         <div className="quiz-scroll">
           <div className="quiz-results">
             <div className="results-header">
-              <div className="results-icon">🎉</div>
-              <h2>Your Career Match Results</h2>
-              <p>Based on your answers, here are your top career matches</p>
+              <div className="results-icon">🎯</div>
+              <h2>Your Placement Domain Match</h2>
+              <p>Based on your technical preferences and problem-solving style</p>
             </div>
 
             <div className="results-cards">
@@ -189,7 +209,7 @@ function CareerQuiz({ onDiscussWithAI }) {
 
             <div className="results-actions">
               <button className="discuss-btn" onClick={handleDiscuss}>
-                💬 Discuss with AI Coach
+                💬 Get Interview Prep Plan from AI
               </button>
               <button className="retake-btn" onClick={resetQuiz}>
                 🔄 Retake Quiz
@@ -208,8 +228,8 @@ function CareerQuiz({ onDiscussWithAI }) {
     <div className="career-quiz">
       <div className="quiz-scroll">
         <div className="quiz-header">
-          <h1>🧩 Career Discovery Quiz</h1>
-          <p>Answer 8 questions to find your ideal career path</p>
+          <h1>🔬 Tech Domain & Placement Quiz</h1>
+          <p>Answer 10 engineering-focused questions to find your ideal tech role</p>
         </div>
 
         <div className="quiz-progress-section">

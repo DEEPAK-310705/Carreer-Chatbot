@@ -1,11 +1,13 @@
 import { Router } from 'express';
+import ResumeAnalysis from '../models/ResumeAnalysis.js';
+import { isDBConnected } from '../db/connection.js';
 
 const router = Router();
 
 // POST /api/resume/analyze — analyze resume text with AI
 router.post('/analyze', async (req, res) => {
   try {
-    const { resumeText } = req.body;
+    const { resumeText, sessionId } = req.body;
 
     if (!resumeText || !resumeText.trim()) {
       return res.status(400).json({ error: 'Resume text is required' });
@@ -68,10 +70,49 @@ ${resumeText}`;
       };
     }
 
+    // Save to database if connected and sessionId provided
+    if (isDBConnected() && sessionId) {
+      try {
+        const analysis = new ResumeAnalysis({
+          sessionId,
+          resumeText: resumeText.substring(0, 10000), // Limit stored text
+          analysis: parsed,
+        });
+        await analysis.save();
+        parsed._id = analysis._id; // Return the DB ID
+      } catch (dbErr) {
+        console.error('Failed to save resume analysis to DB:', dbErr.message);
+        // Continue — don't fail the request just because DB save failed
+      }
+    }
+
     res.json(parsed);
   } catch (error) {
     console.error('Resume analysis error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/resume/history?sessionId=xxx — Get past resume analyses
+router.get('/history', async (req, res) => {
+  try {
+    if (!isDBConnected()) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+
+    const { sessionId } = req.query;
+    if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
+
+    const analyses = await ResumeAnalysis.find({ sessionId })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select('analysis.overallScore analysis.atsScore analysis.summary createdAt')
+      .lean();
+
+    res.json(analyses);
+  } catch (error) {
+    console.error('Error fetching resume history:', error);
+    res.status(500).json({ error: 'Failed to fetch resume history' });
   }
 });
 

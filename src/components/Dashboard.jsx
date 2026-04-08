@@ -11,72 +11,48 @@ function Dashboard() {
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [])
 
-  const careerCards = [
-    {
-      icon: '💻', title: 'Technology', color: '#00d4ff',
-      desc: 'Software Development, AI/ML, Data Science, Cloud Computing',
-      salary: '$75K — $180K', growth: 85, trend: '+22%'
-    },
-    {
-      icon: '🏥', title: 'Healthcare', color: '#22c55e',
-      desc: 'Nursing, Medical Research, Health Informatics, Biotech',
-      salary: '$55K — $150K', growth: 78, trend: '+18%'
-    },
-    {
-      icon: '💰', title: 'Finance', color: '#f59e0b',
-      desc: 'Investment Banking, FinTech, Financial Analysis, Accounting',
-      salary: '$65K — $200K', growth: 62, trend: '+12%'
-    },
-    {
-      icon: '🎨', title: 'Creative & Design', color: '#ec4899',
-      desc: 'UX/UI Design, Brand Strategy, Content Creation, Animation',
-      salary: '$50K — $130K', growth: 70, trend: '+15%'
-    },
-    {
-      icon: '📚', title: 'Education', color: '#7c3aed',
-      desc: 'EdTech, Curriculum Design, Online Teaching, Training',
-      salary: '$45K — $95K', growth: 55, trend: '+10%'
-    },
-    {
-      icon: '📈', title: 'Business & Consulting', color: '#ef4444',
-      desc: 'Management Consulting, Strategy, Operations, Entrepreneurship',
-      salary: '$70K — $190K', growth: 68, trend: '+14%'
-    }
+  const stats = [
+    { label: 'Placement Readiness', value: '85%', icon: '🚀', color: '#10b981' },
+    { label: 'DSA Solved', value: '142', icon: '🧠', color: '#3b82f6' },
+    { label: 'Applications', value: '18', icon: '📄', color: '#8b5cf6' },
+    { label: 'Interviews', value: '3', icon: '🎯', color: '#f59e0b' }
+  ]
+
+  const dsaProgress = [
+    { topic: 'Arrays & Strings', solved: 45, total: 50, color: '#22c55e' },
+    { topic: 'Dynamic Programming', solved: 15, total: 40, color: '#f59e0b' },
+    { topic: 'Graphs & Trees', solved: 25, total: 35, color: '#3b82f6' },
+    { topic: 'System Design', solved: 8, total: 20, color: '#8b5cf6' }
+  ]
+
+  const upcomingDrives = [
+    { company: 'Google', role: 'SWE II', date: 'Oct 15', type: 'On-Campus', logo: '🇬' },
+    { company: 'Microsoft', role: 'SDE', date: 'Oct 22', type: 'Off-Campus', logo: 'Ⓜ️' },
+    { company: 'Amazon', role: 'AWS DevOps', date: 'Nov 05', type: 'Remote', logo: '🅰️' },
+    { company: 'Goldman Sachs', role: 'Quant Analyst', date: 'Nov 12', type: 'On-Campus', logo: '🏦' }
+  ]
+
+  const recommendedRoles = [
+    { title: 'Full Stack Developer', match: 92, salary: '₹12L - ₹24L', tags: ['React', 'Node.js', 'System Design'] },
+    { title: 'Data Scientist', match: 78, salary: '₹10L - ₹20L', tags: ['Python', 'Machine Learning', 'SQL'] },
+    { title: 'Backend Engineer', match: 88, salary: '₹14L - ₹28L', tags: ['Java', 'Microservices', 'AWS'] }
   ]
 
   const skills = [
-    { name: 'Communication', level: 78, color: '#22c55e' },
-    { name: 'Technical Skills', level: 65, color: '#f59e0b' },
-    { name: 'Leadership', level: 45, color: '#ef4444' },
-    { name: 'Problem Solving', level: 82, color: '#22c55e' },
-    { name: 'Creativity', level: 58, color: '#f59e0b' },
-    { name: 'Adaptability', level: 72, color: '#22c55e' },
-    { name: 'Teamwork', level: 88, color: '#22c55e' },
-    { name: 'Time Management', level: 35, color: '#ef4444' }
-  ]
-
-  const marketData = [
-    { label: 'AI/ML', value: 92, color: '#00d4ff' },
-    { label: 'Cloud', value: 85, color: '#7c3aed' },
-    { label: 'Cyber', value: 80, color: '#22c55e' },
-    { label: 'Data', value: 78, color: '#f59e0b' },
-    { label: 'DevOps', value: 75, color: '#ec4899' },
-    { label: 'Mobile', value: 70, color: '#ef4444' },
-    { label: 'Web3', value: 55, color: '#06b6d4' },
-    { label: 'IoT', value: 60, color: '#8b5cf6' }
-  ]
-
-  const stats = [
-    { label: 'Career Fields', value: '500+', icon: '🌐' },
-    { label: 'Avg Salary Growth', value: '12%', icon: '📈' },
-    { label: 'Skills Tracked', value: '200+', icon: '🎯' },
-    { label: 'Success Rate', value: '94%', icon: '🏆' }
+    { name: 'Data Structures', level: 85, color: '#3b82f6' },
+    { name: 'Algorithms', level: 75, color: '#3b82f6' },
+    { name: 'Frontend Dev', level: 90, color: '#10b981' },
+    { name: 'Backend Dev', level: 80, color: '#10b981' },
+    { name: 'System Design', level: 45, color: '#f59e0b' },
+    { name: 'CS Core (OS/DBMS)', level: 70, color: '#8b5cf6' },
+    { name: 'Aptitude', level: 88, color: '#ec4899' },
+    { name: 'Communication', level: 92, color: '#22c55e' }
   ]
 
   const getSkillLabel = (level) => {
-    if (level >= 70) return 'Strong'
-    if (level >= 40) return 'Developing'
-    return 'Needs Work'
+    if (level >= 80) return 'Interview Ready'
+    if (level >= 60) return 'Intermediate'
+    return 'Needs Practice'
   }
 
   return (
@@ -85,59 +61,122 @@ function Dashboard() {
         {/* Header */}
         <div className="dash-header">
           <div className="dash-header-content">
-            <h1>📊 Career Dashboard</h1>
-            <p>Explore career fields, analyze your skills, and track market trends</p>
+            <h1>🎓 Placement Readiness Hub</h1>
+            <p>Track your job applications, DSA progress, and skill matching for top tech companies.</p>
+          </div>
+          <div className="readiness-badge">
+            <svg viewBox="0 0 36 36" className="circular-chart">
+              <path className="circle-bg"
+                d="M18 2.0845
+                  a 15.9155 15.9155 0 0 1 0 31.831
+                  a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path className="circle"
+                strokeDasharray="85, 100"
+                d="M18 2.0845
+                  a 15.9155 15.9155 0 0 1 0 31.831
+                  a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <text x="18" y="20.35" className="percentage">85%</text>
+            </svg>
+            <span>Ready</span>
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Overview Stats */}
         <div className="stats-row">
           {stats.map((stat, i) => (
-            <div key={i} className={`stat-card ${animateStats ? 'animate' : ''}`} style={{ animationDelay: `${i * 0.1}s` }}>
-              <div className="stat-icon">{stat.icon}</div>
-              <div className="stat-value">{stat.value}</div>
-              <div className="stat-label">{stat.label}</div>
+            <div key={i} className={`stat-card ${animateStats ? 'animate' : ''}`} style={{ animationDelay: `${i * 0.1}s`, '--stat-color': stat.color }}>
+              <div className="stat-icon-wrapper" style={{ color: stat.color, background: `${stat.color}15` }}>
+                {stat.icon}
+              </div>
+              <div className="stat-info">
+                <div className="stat-value">{stat.value}</div>
+                <div className="stat-label">{stat.label}</div>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Career Recommendation Cards */}
-        <section className="dash-section">
+        <div className="dashboard-grid-2">
+          {/* DSA Tracker */}
+          <section className="dash-section dsa-section">
+            <div className="section-head">
+              <h2>🧠 DSA & Problem Solving</h2>
+              <button className="view-all-btn">LeetCode Sync 🔄</button>
+            </div>
+            <div className="dsa-list">
+              {dsaProgress.map((item, i) => {
+                const pct = Math.round((item.solved / item.total) * 100)
+                return (
+                  <div key={i} className="dsa-item">
+                    <div className="dsa-item-head">
+                      <span className="dsa-topic">{item.topic}</span>
+                      <span className="dsa-fraction">{item.solved} / {item.total}</span>
+                    </div>
+                    <div className="dsa-bar">
+                      <div className={`dsa-fill ${animateSkills ? 'animate' : ''}`} 
+                           style={{ '--target-width': `${pct}%`, background: item.color, boxShadow: `0 0 10px ${item.color}88` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          {/* Upcoming Drives */}
+          <section className="dash-section drives-section">
+            <div className="section-head">
+              <h2>🏢 Upcoming Placement Drives</h2>
+              <button className="view-all-btn">View All</button>
+            </div>
+            <div className="drives-list">
+              {upcomingDrives.map((drive, i) => (
+                <div key={i} className="drive-card">
+                  <div className="drive-logo">{drive.logo}</div>
+                  <div className="drive-details">
+                    <h3>{drive.company}</h3>
+                    <p>{drive.role}</p>
+                  </div>
+                  <div className="drive-meta">
+                    <span className="drive-date">{drive.date}</span>
+                    <span className="drive-type">{drive.type}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* Job Recommendations */}
+        <section className="dash-section rec-section">
           <div className="section-head">
-            <h2>🚀 Career Recommendations</h2>
-            <p>Top career fields with highest growth potential</p>
+            <h2>💼 Recommended Roles based on your profile</h2>
+            <p>We analyze your skills and DSA progress to suggest the best matches.</p>
           </div>
-          <div className="career-grid">
-            {careerCards.map((card, i) => (
-              <div key={i} className="career-card" style={{ '--card-color': card.color, animationDelay: `${i * 0.08}s` }}>
-                <div className="career-card-header">
-                  <span className="career-icon">{card.icon}</span>
-                  <span className="career-trend" style={{ color: card.color }}>{card.trend}</span>
+          <div className="roles-grid">
+            {recommendedRoles.map((role, i) => (
+              <div key={i} className="role-card">
+                <div className="role-head">
+                  <h3>{role.title}</h3>
+                  <div className="role-match">{role.match}% Match</div>
                 </div>
-                <h3>{card.title}</h3>
-                <p className="career-desc">{card.desc}</p>
-                <div className="career-salary">{card.salary}</div>
-                <div className="career-growth">
-                  <div className="growth-label">
-                    <span>Growth Potential</span>
-                    <span className="growth-pct">{card.growth}%</span>
-                  </div>
-                  <div className="growth-bar">
-                    <div className="growth-fill" style={{ width: `${card.growth}%`, background: `linear-gradient(90deg, ${card.color}, ${card.color}88)` }} />
-                  </div>
+                <div className="role-salary">💰 {role.salary}</div>
+                <div className="role-tags">
+                  {role.tags.map((tag, j) => <span key={j} className="role-tag">{tag}</span>)}
                 </div>
+                <button className="apply-btn">Apply Now</button>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Skill Gap Analysis */}
-        <section className="dash-section">
+        {/* Detailed Skills */}
+        <section className="dash-section pb-40">
           <div className="section-head">
-            <h2>🎯 Skill Gap Analysis</h2>
-            <p>Identify strengths and areas for improvement</p>
+            <h2>🎯 Technical Skill Matrix</h2>
           </div>
-          <div className="skills-container">
+          <div className="skills-container inner">
             <div className="skills-grid">
               {skills.map((skill, i) => (
                 <div key={i} className="skill-item">
@@ -160,40 +199,6 @@ function Dashboard() {
                       }}
                     />
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="skills-legend">
-              <div className="legend-item"><span className="legend-dot" style={{ background: '#22c55e' }} /> Strong (70%+)</div>
-              <div className="legend-item"><span className="legend-dot" style={{ background: '#f59e0b' }} /> Developing (40-69%)</div>
-              <div className="legend-item"><span className="legend-dot" style={{ background: '#ef4444' }} /> Needs Work (&lt;40%)</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Job Market Trends Chart */}
-        <section className="dash-section">
-          <div className="section-head">
-            <h2>📈 Job Market Trends 2026</h2>
-            <p>Demand index by technology domain</p>
-          </div>
-          <div className="chart-container">
-            <div className="bar-chart">
-              {marketData.map((item, i) => (
-                <div key={i} className="bar-group">
-                  <div className="bar-value">{item.value}%</div>
-                  <div className="bar-wrapper">
-                    <div
-                      className={`bar ${animateStats ? 'animate' : ''}`}
-                      style={{
-                        '--target-height': `${item.value}%`,
-                        background: `linear-gradient(180deg, ${item.color}, ${item.color}66)`,
-                        boxShadow: `0 0 16px ${item.color}33`,
-                        animationDelay: `${i * 0.08}s`
-                      }}
-                    />
-                  </div>
-                  <div className="bar-label">{item.label}</div>
                 </div>
               ))}
             </div>

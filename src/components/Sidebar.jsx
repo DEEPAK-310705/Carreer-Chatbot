@@ -1,7 +1,21 @@
 import { useState } from 'react'
 import './Sidebar.css'
 
-function Sidebar({ onSettingsClick, botMode, activeView, onViewChange, backendStatus }) {
+function Sidebar({
+  onSettingsClick,
+  botMode,
+  activeView,
+  onViewChange,
+  backendStatus,
+  dbConnected,
+  conversationList = [],
+  currentConversationId,
+  onLoadConversation,
+  onNewConversation,
+  onDeleteConversation,
+}) {
+  const [showHistory, setShowHistory] = useState(false)
+
   const navTabs = [
     { id: 'chat', label: 'AI Chat', icon: '💬', desc: 'Career guidance chat' },
     { id: 'dashboard', label: 'Dashboard', icon: '📊', desc: 'Charts & analytics' },
@@ -32,6 +46,16 @@ function Sidebar({ onSettingsClick, botMode, activeView, onViewChange, backendSt
   }
 
   const statusInfo = getStatusInfo()
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr)
+    const now = new Date()
+    const diff = now - d
+    if (diff < 60000) return 'Just now'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+    return d.toLocaleDateString()
+  }
 
   return (
     <aside className="sidebar">
@@ -64,6 +88,62 @@ function Sidebar({ onSettingsClick, botMode, activeView, onViewChange, backendSt
         ))}
       </div>
 
+      {/* Chat History (DB-connected) */}
+      {dbConnected && (
+        <div className="section">
+          <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>💾 Chat History</span>
+            <button
+              className="history-toggle-btn"
+              onClick={() => setShowHistory(!showHistory)}
+              title={showHistory ? 'Collapse' : 'Expand'}
+            >
+              {showHistory ? '▲' : '▼'}
+            </button>
+          </div>
+
+          <button className="new-chat-btn" onClick={onNewConversation}>
+            ✨ New Chat
+          </button>
+
+          {showHistory && (
+            <div className="conversation-list">
+              {conversationList.length === 0 ? (
+                <p className="mode-info" style={{ textAlign: 'center', padding: '8px 0' }}>
+                  No saved conversations yet
+                </p>
+              ) : (
+                conversationList.map(conv => (
+                  <div
+                    key={conv._id}
+                    className={`conversation-item ${currentConversationId === conv._id ? 'active' : ''}`}
+                    onClick={() => onLoadConversation(conv._id)}
+                  >
+                    <div className="conv-title">{conv.title}</div>
+                    <div className="conv-meta">
+                      <span className="conv-count">{conv.messageCount} msgs</span>
+                      <span className="conv-time">{formatDate(conv.updatedAt)}</span>
+                    </div>
+                    <button
+                      className="conv-delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (confirm('Delete this conversation?')) {
+                          onDeleteConversation(conv._id)
+                        }
+                      }}
+                      title="Delete conversation"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="section">
         <div className="section-title">Current Mode</div>
         <div className="mode-display">
@@ -78,6 +158,18 @@ function Sidebar({ onSettingsClick, botMode, activeView, onViewChange, backendSt
           <div className={`status-dot ${statusInfo.dot}`}></div>
           <span style={{ color: statusInfo.color }}>{statusInfo.text}</span>
         </div>
+        {dbConnected && (
+          <div className="key-status" style={{ marginTop: '4px' }}>
+            <div className="status-dot active"></div>
+            <span style={{ color: 'var(--success)' }}>🗄️ Database Connected</span>
+          </div>
+        )}
+        {!dbConnected && backendStatus === 'online' && (
+          <div className="key-status" style={{ marginTop: '4px' }}>
+            <div className="status-dot warning"></div>
+            <span style={{ color: 'var(--warning)' }}>🗄️ No Database</span>
+          </div>
+        )}
         {backendStatus === 'no-key' && (
           <p className="mode-info" style={{ color: 'var(--warning)', marginTop: '6px' }}>
             Set GEMINI_API_KEY in server/.env
