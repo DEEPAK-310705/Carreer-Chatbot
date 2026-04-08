@@ -12,7 +12,9 @@ import * as db from './api/db'
 function getSessionId() {
   let id = localStorage.getItem('careerbot_session_id')
   if (!id) {
-    id = crypto.randomUUID()
+    id = window.crypto && window.crypto.randomUUID 
+      ? window.crypto.randomUUID() 
+      : 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     localStorage.setItem('careerbot_session_id', id)
   }
   return id
