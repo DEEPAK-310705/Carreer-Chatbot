@@ -1,170 +1,171 @@
 import { Router } from 'express';
-import Conversation from '../models/Conversation.js';
-import { isDBConnected } from '../db/connection.js';
+import { isDBConnected, getDB } from '../db/connection.js';
 
 const router = Router();
 
 // Middleware: check DB connection
 const requireDB = (req, res, next) => {
   if (!isDBConnected()) {
-    return res.status(503).json({ error: 'Database not connected. Data will not persist.' });
+    return res.status(503).json({ error: 'Database not connected' });
   }
   next();
 };
 
-// GET /api/conversations?sessionId=xxx — List all conversations for a session
+const formatConv = (row) => ({
+  _id: row.id,
+  title: row.title,
+  mode: row.mode,
+  isActive: Boolean(row.isActive),
+  messages: JSON.parse(row.messages || '[]'),
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt
+});
+
+// GET /api/conversations?sessionId=xxx
 router.get('/', requireDB, async (req, res) => {
   try {
+    const db = getDB();
     const { sessionId } = req.query;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
 
-    const conversations = await Conversation.find({ sessionId })
-      .sort({ updatedAt: -1 })
-      .select('title mode isActive createdAt updatedAt messages')
-      .lean();
-
-    // Add message count and last message preview
-    const result = conversations.map(conv => ({
-      _id: conv._id,
-      title: conv.title,
-      mode: conv.mode,
-      isActive: conv.isActive,
-      messageCount: conv.messages.length,
-      lastMessage: conv.messages.length > 0
-        ? conv.messages[conv.messages.length - 1].content.substring(0, 80)
-        : '',
-      createdAt: conv.createdAt,
-      updatedAt: conv.updatedAt,
-    }));
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ error: 'Failed to fetch conversations' });
-  }
-});
-
-// GET /api/conversations/:id — Get a single conversation with all messages
-router.get('/:id', requireDB, async (req, res) => {
-  try {
-    const conversation = await Conversation.findById(req.params.id).lean();
-    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
-    res.json(conversation);
-  } catch (error) {
-    console.error('Error fetching conversation:', error);
-    res.status(500).json({ error: 'Failed to fetch conversation' });
-  }
-});
-
-// POST /api/conversations — Create a new conversation
-router.post('/', requireDB, async (req, res) => {
-  try {
-    const { sessionId, mode, messages } = req.body;
-    if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
-
-    const conversation = new Conversation({
-      sessionId,
-      mode: mode || 'general',
-      messages: messages || [],
+    const rows = await db.all('SELECT * FROM conversations WHERE sessionId = ? ORDER BY updatedAt DESC', [sessionId]);
+    
+    const result = rows.map(conv => {
+      const parsed = formatConv(conv);
+      return {
+        _id: parsed._id,
+        title: parsed.title,
+        mode: parsed.mode,
+        isActive: parsed.isActive,
+        messageCount: parsed.messages.length,
+        lastMessage: parsed.messages.length > 0
+          ? parsed.messages[parsed.messages.length - 1].content.substring(0, 80)
+          : '',
+        createdAt: parsed.createdAt,
+        updatedAt: parsed.updatedAt
+      };
     });
 
-    if (messages && messages.length > 0) {
-      conversation.autoTitle();
-    }
-
-    await conversation.save();
-    res.status(201).json(conversation);
-  } catch (error) {
-    console.error('Error creating conversation:', error);
-    res.status(500).json({ error: 'Failed to create conversation' });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch' });
   }
 });
 
-// PUT /api/conversations/:id — Update a conversation (add messages, rename, etc.)
+// GET /api/conversations/:id
+router.get('/:id', requireDB, async (req, res) => {
+  try {
+    const db = getDB();
+    const conv = await db.get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    res.json(formatConv(conv));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/conversations
+router.post('/', requireDB, async (req, res) => {
+  try {
+    const db = getDB();
+    const { sessionId, mode, messages } = req.body;
+    if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+
+    const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const msgs = messages || [];
+    
+    let title = 'New Conversation';
+    const firstUserMsg = msgs.find(m => m.role === 'user');
+    if (firstUserMsg) {
+      title = firstUserMsg.content.substring(0, 60) + (firstUserMsg.content.length > 60 ? '...' : '');
+    }
+
+    await db.run(
+      'INSERT INTO conversations (id, sessionId, title, mode, messages) VALUES (?, ?, ?, ?, ?)',
+      [id, sessionId, mode || 'general', title, JSON.stringify(msgs)]
+    );
+    
+    const newConv = await db.get('SELECT * FROM conversations WHERE id = ?', [id]);
+    res.status(201).json(formatConv(newConv));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/conversations/:id
 router.put('/:id', requireDB, async (req, res) => {
   try {
+    const db = getDB();
     const { messages, title, isActive } = req.body;
-    const update = {};
-
-    if (messages) update.messages = messages;
-    if (title) update.title = title;
-    if (typeof isActive === 'boolean') update.isActive = isActive;
-
-    const conversation = await Conversation.findByIdAndUpdate(
-      req.params.id,
-      { $set: update },
-      { new: true, runValidators: true }
-    );
-
-    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
-
-    // Auto-title if still default and has messages
-    if (conversation.title === 'New Conversation' && conversation.messages.length > 0) {
-      conversation.autoTitle();
-      await conversation.save();
+    const conv = await db.get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+    if (!conv) return res.status(404).json({ error: 'Not found' });
+    
+    const parsed = formatConv(conv);
+    if (messages) parsed.messages = messages;
+    if (title) parsed.title = title;
+    if (typeof isActive === 'boolean') parsed.isActive = isActive;
+    
+    if (parsed.title === 'New Conversation' && parsed.messages.length > 0) {
+      const fMsg = parsed.messages.find(m => m.role === 'user');
+      if (fMsg) parsed.title = fMsg.content.substring(0, 60) + (fMsg.content.length > 60 ? '...' : '');
     }
-
-    res.json(conversation);
-  } catch (error) {
-    console.error('Error updating conversation:', error);
-    res.status(500).json({ error: 'Failed to update conversation' });
+    
+    await db.run(
+      'UPDATE conversations SET title = ?, messages = ?, isActive = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+      [parsed.title, JSON.stringify(parsed.messages), parsed.isActive ? 1 : 0, req.params.id]
+    );
+    
+    const up = await db.get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+    res.json(formatConv(up));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/conversations/:id/messages — Append a single message
+// POST /api/conversations/:id/messages
 router.post('/:id/messages', requireDB, async (req, res) => {
   try {
+    const db = getDB();
     const { role, content, voice } = req.body;
-    if (!role || !content) return res.status(400).json({ error: 'role and content are required' });
-
-    const conversation = await Conversation.findByIdAndUpdate(
-      req.params.id,
-      {
-        $push: {
-          messages: { role, content, voice, timestamp: new Date() }
-        }
-      },
-      { new: true }
-    );
-
-    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
-
-    // Auto-title on first user message
-    if (conversation.title === 'New Conversation') {
-      conversation.autoTitle();
-      await conversation.save();
+    const conv = await db.get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+    if (!conv) return res.status(404).json({ error: 'Not found' });
+    
+    const parsed = formatConv(conv);
+    parsed.messages.push({ role, content, voice, timestamp: new Date() });
+    
+    if (parsed.title === 'New Conversation' && role === 'user') {
+      parsed.title = content.substring(0, 60) + (content.length > 60 ? '...' : '');
     }
-
-    res.json(conversation);
-  } catch (error) {
-    console.error('Error adding message:', error);
-    res.status(500).json({ error: 'Failed to add message' });
+    
+    await db.run(
+      'UPDATE conversations SET title = ?, messages = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+      [parsed.title, JSON.stringify(parsed.messages), req.params.id]
+    );
+    
+    const up = await db.get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+    res.json(formatConv(up));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE /api/conversations/:id — Delete a conversation
+// DELETE /api/conversations/:id
 router.delete('/:id', requireDB, async (req, res) => {
   try {
-    const result = await Conversation.findByIdAndDelete(req.params.id);
-    if (!result) return res.status(404).json({ error: 'Conversation not found' });
-    res.json({ message: 'Conversation deleted' });
-  } catch (error) {
-    console.error('Error deleting conversation:', error);
-    res.status(500).json({ error: 'Failed to delete conversation' });
+    await getDB().run('DELETE FROM conversations WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Deleted' });
+  } catch(err) {
+    res.status(500).json({error: err.message});
   }
 });
 
-// DELETE /api/conversations?sessionId=xxx — Delete all conversations for a session
+// DELETE /api/conversations?sessionId=xxx
 router.delete('/', requireDB, async (req, res) => {
   try {
-    const { sessionId } = req.query;
-    if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
-
-    const result = await Conversation.deleteMany({ sessionId });
-    res.json({ message: `Deleted ${result.deletedCount} conversations` });
-  } catch (error) {
-    console.error('Error deleting conversations:', error);
-    res.status(500).json({ error: 'Failed to delete conversations' });
+    await getDB().run('DELETE FROM conversations WHERE sessionId = ?', [req.query.sessionId]);
+    res.json({ message: 'Deleted' });
+  } catch(err) {
+    res.status(500).json({error: err.message});
   }
 });
 

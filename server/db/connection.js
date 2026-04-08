@@ -1,43 +1,58 @@
-import mongoose from 'mongoose';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-let isConnected = false;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let dbInstance = null;
 
 const connectDB = async () => {
-  if (isConnected) return;
-
-  const mongoURI = process.env.MONGODB_URI;
-
-  if (!mongoURI) {
-    console.warn('⚠️  MONGODB_URI not set — database features disabled. Data will not persist.');
-    return;
-  }
+  if (dbInstance) return;
 
   try {
-    console.log('🔄 Connecting to MongoDB...');
-    const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
+    console.log('🔄 Connecting to local SQLite Database...');
+    dbInstance = await open({
+      filename: path.join(__dirname, '..', 'careerbot.db'),
+      driver: sqlite3.Database
     });
 
-    isConnected = true;
-    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+    // Initialize Schema natively
+    await dbInstance.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sessionId TEXT UNIQUE NOT NULL,
+        preferences TEXT,
+        lastActive DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
 
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-      isConnected = false;
-    });
+      CREATE TABLE IF NOT EXISTS conversations (
+        id TEXT PRIMARY KEY,
+        sessionId TEXT NOT NULL,
+        title TEXT DEFAULT 'New Conversation',
+        mode TEXT DEFAULT 'general',
+        isActive INTEGER DEFAULT 1,
+        messages TEXT DEFAULT '[]',
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
 
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected');
-      isConnected = false;
-    });
+      CREATE TABLE IF NOT EXISTS resume_analyses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sessionId TEXT NOT NULL,
+        resumeText TEXT,
+        analysis TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
+    console.log(`✅ SQLite Database connected successfully securely on disk!`);
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    console.warn('⚠️  App will continue without database — data will not persist.');
+    console.error('❌ SQLite connection failed:', error.message);
   }
 };
 
-export const isDBConnected = () => isConnected;
+export const isDBConnected = () => !!dbInstance;
+export const getDB = () => dbInstance;
 export default connectDB;
-

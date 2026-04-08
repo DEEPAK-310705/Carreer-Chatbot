@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import ResumeAnalysis from '../models/ResumeAnalysis.js';
-import { isDBConnected } from '../db/connection.js';
+import { isDBConnected, getDB } from '../db/connection.js';
 
 const router = Router();
 
@@ -15,7 +14,7 @@ router.post('/analyze', async (req, res) => {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      return res.status(500).json({ error: 'Server API key is not configured. Please set GEMINI_API_KEY in the server .env file.' });
+      return res.status(500).json({ error: 'Server API key is not configured' });
     }
 
     const prompt = `Analyze this resume and provide a detailed evaluation. Return your response in EXACTLY this JSON format (no markdown, no code blocks, just pure JSON):
@@ -53,13 +52,11 @@ ${resumeText}`;
 
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    // Try to parse JSON from the response
     let parsed;
     try {
       const cleaned = reply.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      // Fallback results if JSON parsing fails
       parsed = {
         overallScore: 72,
         atsScore: 68,
@@ -70,19 +67,16 @@ ${resumeText}`;
       };
     }
 
-    // Save to database if connected and sessionId provided
     if (isDBConnected() && sessionId) {
       try {
-        const analysis = new ResumeAnalysis({
-          sessionId,
-          resumeText: resumeText.substring(0, 10000), // Limit stored text
-          analysis: parsed,
-        });
-        await analysis.save();
-        parsed._id = analysis._id; // Return the DB ID
+        const db = getDB();
+        const resObj = await db.run(
+          'INSERT INTO resume_analyses (sessionId, resumeText, analysis) VALUES (?, ?, ?)',
+          [sessionId, resumeText.substring(0, 10000), JSON.stringify(parsed)]
+        );
+        parsed._id = resObj.lastID; 
       } catch (dbErr) {
         console.error('Failed to save resume analysis to DB:', dbErr.message);
-        // Continue — don't fail the request just because DB save failed
       }
     }
 
@@ -96,18 +90,26 @@ ${resumeText}`;
 // GET /api/resume/history?sessionId=xxx — Get past resume analyses
 router.get('/history', async (req, res) => {
   try {
-    if (!isDBConnected()) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
+    if (!isDBConnected()) return res.status(503).json({ error: 'Database not connected' });
 
     const { sessionId } = req.query;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
 
-    const analyses = await ResumeAnalysis.find({ sessionId })
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .select('analysis.overallScore analysis.atsScore analysis.summary createdAt')
-      .lean();
+    const db = getDB();
+    const rows = await db.all('SELECT * FROM resume_analyses WHERE sessionId = ? ORDER BY createdAt DESC LIMIT 20', [sessionId]);
+
+    const analyses = rows.map(r => {
+      const p = JSON.parse(r.analysis || '{}');
+      return {
+        _id: r.id,
+        analysis: {
+          overallScore: p.overallScore,
+          atsScore: p.atsScore,
+          summary: p.summary
+        },
+        createdAt: r.createdAt
+      }
+    });
 
     res.json(analyses);
   } catch (error) {

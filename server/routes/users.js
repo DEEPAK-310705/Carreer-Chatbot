@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import User from '../models/User.js';
-import { isDBConnected } from '../db/connection.js';
+import { isDBConnected, getDB } from '../db/connection.js';
 
 const router = Router();
 
@@ -15,19 +14,19 @@ const requireDB = (req, res, next) => {
 // POST /api/users/session — Get or create a user session
 router.post('/session', requireDB, async (req, res) => {
   try {
+    const db = getDB();
     const { sessionId } = req.body;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
 
-    let user = await User.findOne({ sessionId });
+    const user = await db.get('SELECT * FROM users WHERE sessionId = ?', [sessionId]);
 
     if (!user) {
-      user = new User({ sessionId });
-      await user.save();
+      await db.run('INSERT INTO users (sessionId) VALUES (?)', [sessionId]);
+      res.json({ sessionId, preferences: null });
     } else {
-      await user.touch();
+      await db.run('UPDATE users SET lastActive = CURRENT_TIMESTAMP WHERE sessionId = ?', [sessionId]);
+      res.json({ sessionId: user.sessionId, preferences: user.preferences ? JSON.parse(user.preferences) : null });
     }
-
-    res.json(user);
   } catch (error) {
     console.error('Error with user session:', error);
     res.status(500).json({ error: 'Failed to manage user session' });
@@ -37,16 +36,19 @@ router.post('/session', requireDB, async (req, res) => {
 // PUT /api/users/preferences — Update user preferences
 router.put('/preferences', requireDB, async (req, res) => {
   try {
+    const db = getDB();
     const { sessionId, preferences } = req.body;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
 
-    const user = await User.findOneAndUpdate(
-      { sessionId },
-      { $set: { preferences, lastActive: new Date() } },
-      { new: true, upsert: true }
+    const prefStr = JSON.stringify(preferences);
+    
+    // SQLite upsert
+    await db.run(
+      'INSERT INTO users (sessionId, preferences) VALUES (?, ?) ON CONFLICT(sessionId) DO UPDATE SET preferences = ?, lastActive = CURRENT_TIMESTAMP',
+      [sessionId, prefStr, prefStr]
     );
 
-    res.json(user);
+    res.json({ sessionId, preferences });
   } catch (error) {
     console.error('Error updating preferences:', error);
     res.status(500).json({ error: 'Failed to update preferences' });
@@ -56,13 +58,14 @@ router.put('/preferences', requireDB, async (req, res) => {
 // GET /api/users/preferences?sessionId=xxx — Get user preferences
 router.get('/preferences', requireDB, async (req, res) => {
   try {
+    const db = getDB();
     const { sessionId } = req.query;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
 
-    const user = await User.findOne({ sessionId }).lean();
+    const user = await db.get('SELECT * FROM users WHERE sessionId = ?', [sessionId]);
     if (!user) return res.json({ preferences: null });
 
-    res.json({ preferences: user.preferences });
+    res.json({ preferences: user.preferences ? JSON.parse(user.preferences) : null });
   } catch (error) {
     console.error('Error fetching preferences:', error);
     res.status(500).json({ error: 'Failed to fetch preferences' });
