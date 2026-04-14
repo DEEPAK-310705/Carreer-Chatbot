@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files (never commit secrets)
+.env
+*.env
+
+# SQLite database — lives on the server, not in git
+*.db
+*.sqlite
+*.sqlite3

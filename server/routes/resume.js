@@ -2,17 +2,18 @@ import { Router } from 'express';
 import { isDBConnected, getDB } from '../db/connection.js';
 
 const router = Router();
+const isOpenRouterKey = (key = '') => String(key).trim().startsWith('sk-or-v1-');
 
 // POST /api/resume/analyze — analyze resume text with AI
 router.post('/analyze', async (req, res) => {
   try {
-    const { resumeText, sessionId } = req.body;
+    const { resumeText, sessionId, apiKey: requestApiKey } = req.body;
 
     if (!resumeText || !resumeText.trim()) {
       return res.status(400).json({ error: 'Resume text is required' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = (requestApiKey || process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY || '').trim();
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
       return res.status(500).json({ error: 'Server API key is not configured' });
     }
@@ -30,27 +31,54 @@ router.post('/analyze', async (req, res) => {
 Resume to analyze:
 ${resumeText}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
+    const useOpenRouter = isOpenRouterKey(apiKey);
+
+    let reply = '';
+
+    if (useOpenRouter) {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          model: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
+          messages: [{ role: 'user', content: prompt }]
         })
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Gemini API Error:', data);
-      return res.status(response.status).json({
-        error: data.error?.message || 'Gemini API error'
       });
-    }
 
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.error('OpenRouter API Error:', data);
+        return res.status(response.status).json({
+          error: data?.error?.message || data?.message || 'OpenRouter API error'
+        });
+      }
+
+      reply = data?.choices?.[0]?.message?.content || '';
+    } else {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.error('Gemini API Error:', data);
+        return res.status(response.status).json({
+          error: data?.error?.message || 'Gemini API error'
+        });
+      }
+
+      reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
 
     let parsed;
     try {

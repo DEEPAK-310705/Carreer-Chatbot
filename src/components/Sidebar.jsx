@@ -13,6 +13,7 @@ function Sidebar({
   onLoadConversation,
   onNewConversation,
   onDeleteConversation,
+  onChangeApiKey,
 }) {
   const [showHistory, setShowHistory] = useState(false)
 
@@ -172,13 +173,18 @@ function Sidebar({
         )}
         {backendStatus === 'no-key' && (
           <p className="mode-info" style={{ color: 'var(--warning)', marginTop: '6px' }}>
-            Set GEMINI_API_KEY in server/.env
+            Set GEMINI_API_KEY or OPENROUTER_API_KEY in server/.env
           </p>
         )}
         {backendStatus === 'offline' && (
           <p className="mode-info" style={{ color: 'var(--error)', marginTop: '6px' }}>
             Run: cd server && node server.js
           </p>
+        )}
+        {onChangeApiKey && (
+          <button className="new-chat-btn" style={{ marginTop: '8px' }} onClick={onChangeApiKey}>
+            🔑 Change API Key
+          </button>
         )}
       </div>
 

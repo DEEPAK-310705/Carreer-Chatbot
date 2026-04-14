@@ -20,7 +20,13 @@ function getSessionId() {
   return id
 }
 
+const isSupportedApiKey = (key = '') => {
+  const trimmed = String(key).trim()
+  return trimmed.startsWith('AIza') || trimmed.startsWith('sk-or-v1-')
+}
+
 function App() {
+  const storedApiKey = localStorage.getItem('careerbot_user_gemini_key') || ''
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -35,6 +41,10 @@ function App() {
     return saved !== null ? saved === 'true' : true
   })
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('selected_voice') || 'female-indian')
+  const [userApiKey, setUserApiKey] = useState(storedApiKey)
+  const [apiKeyInput, setApiKeyInput] = useState(storedApiKey)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState('')
   const messagesEndRef = useRef(null)
 
   // Conversation tracking
@@ -208,10 +218,13 @@ function App() {
   }
 
   const sendMessage = async (userMessage) => {
-    if (backendStatus !== 'online') {
-      setError(backendStatus === 'no-key'
-        ? 'The server API key is not configured. Please set GEMINI_API_KEY in the server .env file.'
-        : 'Backend server is offline. Please make sure the server is running.')
+    if (backendStatus === 'offline' || backendStatus === 'checking') {
+      setError('Backend server is offline. Please make sure the server is running.')
+      return
+    }
+
+    if (!userApiKey.trim()) {
+      setError('Enter your Gemini or OpenRouter API key to continue.')
       return
     }
 
@@ -249,13 +262,22 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          mode: botMode
+          mode: botMode,
+          apiKey: userApiKey.trim()
         })
       })
 
       const data = await res.json()
 
       if (!res.ok) {
+        if (data?.code === 'QUOTA_EXCEEDED' || data?.code === 'INVALID_API_KEY') {
+          localStorage.removeItem('careerbot_user_gemini_key')
+          setUserApiKey('')
+          setApiKeyInput('')
+          setApiKeyError(data.error || 'Please enter a valid Gemini or OpenRouter API key.')
+          setError('')
+          return
+        }
         throw new Error(data.error || 'Server error')
       }
 
@@ -275,6 +297,33 @@ function App() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const saveApiKey = (event) => {
+    event.preventDefault()
+    const key = apiKeyInput.trim()
+
+    if (!key) {
+      setApiKeyError('API key is required')
+      return
+    }
+
+    if (!isSupportedApiKey(key)) {
+      setApiKeyError('Use a valid Gemini key (AIza...) or OpenRouter key (sk-or-v1-...).')
+      return
+    }
+
+    localStorage.setItem('careerbot_user_gemini_key', key)
+    setUserApiKey(key)
+    setApiKeyError('')
+    setError('')
+  }
+
+  const handleChangeApiKey = () => {
+    setApiKeyInput(userApiKey)
+    setUserApiKey('')
+    localStorage.removeItem('careerbot_user_gemini_key')
+    setApiKeyError('Please enter your new API key.')
   }
 
   const regenerateLastMessage = async () => {
@@ -341,7 +390,7 @@ function App() {
       case 'quiz':
         return <CareerQuiz onDiscussWithAI={handleQuizDiscuss} />
       case 'resume':
-        return <ResumeAnalyzer sessionId={sessionId} />
+        return <ResumeAnalyzer sessionId={sessionId} userApiKey={userApiKey} />
       case 'chat':
       default:
         return (
@@ -360,6 +409,39 @@ function App() {
           />
         )
     }
+  }
+
+  if (!userApiKey) {
+    return (
+      <div className="api-key-gate" data-theme={theme}>
+        <div className="api-key-card">
+          <h1>CareerBot Setup</h1>
+          <p>Enter your Gemini or OpenRouter API key to start chatting.</p>
+          <form onSubmit={saveApiKey} className="api-key-form">
+            <input
+              type={showApiKey ? 'text' : 'password'}
+              value={apiKeyInput}
+              onChange={(e) => {
+                setApiKeyInput(e.target.value)
+                if (apiKeyError) setApiKeyError('')
+              }}
+              placeholder="AIza... or sk-or-v1-..."
+              autoFocus
+            />
+            <button
+              type="button"
+              className="api-key-toggle"
+              onClick={() => setShowApiKey(!showApiKey)}
+            >
+              {showApiKey ? 'Hide' : 'Show'}
+            </button>
+            <button type="submit" className="api-key-submit">Start CareerBot</button>
+          </form>
+          {apiKeyError && <p className="api-key-error">{apiKeyError}</p>}
+          <p className="api-key-note">Stored only in your browser local storage.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -383,13 +465,14 @@ function App() {
           botMode={botMode}
           activeView={activeView}
           onViewChange={setActiveView}
-          backendStatus={backendStatus}
+          backendStatus={backendStatus === 'no-key' ? 'online' : backendStatus}
           dbConnected={dbConnected}
           conversationList={conversationList}
           currentConversationId={currentConversationId}
           onLoadConversation={loadConversation}
           onNewConversation={startNewConversation}
           onDeleteConversation={handleDeleteConversation}
+          onChangeApiKey={handleChangeApiKey}
         />
         {renderActiveView()}
       </div>

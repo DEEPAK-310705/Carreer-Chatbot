@@ -87,7 +87,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
 // ---------------------
 
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
+  const serverInstance = app.listen(PORT, () => {
     console.log(`\n🚀 CareerBot Server running on http://localhost:${PORT}`);
     console.log(`📡 API endpoints:`);
     console.log(`   POST /api/chat              — AI chat`);
@@ -99,6 +99,18 @@ if (!process.env.VERCEL) {
     console.log(`\n🔑 API Key: ${process.env.GEMINI_API_KEY ? '✓ Configured' : '✗ NOT SET — add GEMINI_API_KEY to .env'}`);
     console.log(`🗄️  Database: ${isDBConnected() ? '✓ Connected' : '✗ NOT CONNECTED — add MONGODB_URI to .env'}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  });
+
+  serverInstance.on('error', (error) => {
+    if (error?.code === 'EADDRINUSE') {
+      console.error(`\n❌ Port ${PORT} is already in use. Another server instance is already running.`);
+      console.error('   Stop the existing process or run with a different PORT in server/.env.\n');
+      process.exit(1);
+      return;
+    }
+
+    console.error('\n❌ Server failed to start:', error);
+    process.exit(1);
   });
 }
 

@@ -100,7 +100,7 @@ function Settings({ theme, botMode, selectedVoice, onThemeChange, onModeChange, 
             <h3>ℹ️ About</h3>
             <div className="about-info">
               <p><strong>CareerBot AI v3.0</strong></p>
-              <p>Your AI-powered career guidance platform with interactive dashboard, career quiz, resume analyzer, and voice capabilities. Powered by Google Gemini API.</p>
+              <p>Your AI-powered career guidance platform with interactive dashboard, career quiz, resume analyzer, and voice capabilities. Powered by Gemini or OpenRouter API.</p>
               <ul>
                 <li>✓ 📊 Interactive Career Dashboard</li>
                 <li>✓ 🧩 Career Discovery Quiz</li>
