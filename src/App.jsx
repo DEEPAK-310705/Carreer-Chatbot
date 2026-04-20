@@ -22,7 +22,7 @@ function getSessionId() {
 
 const isSupportedApiKey = (key = '') => {
   const trimmed = String(key).trim()
-  return trimmed.startsWith('AIza') || trimmed.startsWith('sk-or-v1-')
+  return trimmed.startsWith('AIza') || trimmed.startsWith('sk-or-v1-') || trimmed.startsWith('gsk_') || trimmed.startsWith('sk-')
 }
 
 function App() {
@@ -45,6 +45,9 @@ function App() {
   const [apiKeyInput, setApiKeyInput] = useState(storedApiKey)
   const [showApiKey, setShowApiKey] = useState(false)
   const [apiKeyError, setApiKeyError] = useState('')
+  const [apiKeySuccess, setApiKeySuccess] = useState('')
+  const [isValidatingApiKey, setIsValidatingApiKey] = useState(false)
+  const [isApiKeyGateOpen, setIsApiKeyGateOpen] = useState(!storedApiKey)
   const messagesEndRef = useRef(null)
 
   // Conversation tracking
@@ -223,8 +226,8 @@ function App() {
       return
     }
 
-    if (!userApiKey.trim()) {
-      setError('Enter your Gemini or OpenRouter API key to continue.')
+    if (!userApiKey.trim() && backendStatus !== 'online') {
+      setError('Enter your Gemini/OpenAI/OpenRouter/Groq API key or configure one on the server to continue.')
       return
     }
 
@@ -263,7 +266,7 @@ function App() {
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           mode: botMode,
-          apiKey: userApiKey.trim()
+          apiKey: userApiKey.trim() || undefined
         })
       })
 
@@ -274,7 +277,9 @@ function App() {
           localStorage.removeItem('careerbot_user_gemini_key')
           setUserApiKey('')
           setApiKeyInput('')
-          setApiKeyError(data.error || 'Please enter a valid Gemini or OpenRouter API key.')
+          setApiKeySuccess('')
+          setIsApiKeyGateOpen(true)
+          setApiKeyError(data.error || 'Please enter a valid Gemini, OpenAI, OpenRouter, or Groq API key.')
           setError('')
           return
         }
@@ -299,23 +304,80 @@ function App() {
     }
   }
 
-  const saveApiKey = (event) => {
-    event.preventDefault()
-    const key = apiKeyInput.trim()
+  const validateApiKey = async (key, { showSuccess = false } = {}) => {
+    setIsValidatingApiKey(true)
+    setApiKeyError('')
+    if (showSuccess) setApiKeySuccess('')
 
+    try {
+      const res = await fetch('/api/users/validate-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: key })
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        setApiKeySuccess('')
+        setApiKeyError(data.error || 'Unable to validate this API key right now.')
+        return false
+      }
+
+      if (showSuccess) {
+        setApiKeySuccess(data.message || 'API key is valid and ready.')
+      }
+      return true
+    } catch {
+      setApiKeySuccess('')
+      setApiKeyError('Unable to validate this API key right now.')
+      return false
+    } finally {
+      setIsValidatingApiKey(false)
+    }
+  }
+
+  const handleTestApiKey = async () => {
+    const key = apiKeyInput.trim()
     if (!key) {
+      setApiKeySuccess('')
       setApiKeyError('API key is required')
       return
     }
 
     if (!isSupportedApiKey(key)) {
-      setApiKeyError('Use a valid Gemini key (AIza...) or OpenRouter key (sk-or-v1-...).')
+      setApiKeySuccess('')
+      setApiKeyError('Use a valid Gemini key (AIza...), OpenRouter key (sk-or-v1-...), Groq key (gsk_...), or OpenAI key (sk-...).')
       return
     }
 
+    await validateApiKey(key, { showSuccess: true })
+  }
+
+  const saveApiKey = async (event) => {
+    event.preventDefault()
+    const key = apiKeyInput.trim()
+
+    if (!key) {
+      setApiKeySuccess('')
+      setApiKeyError('API key is required')
+      return
+    }
+
+    if (!isSupportedApiKey(key)) {
+      setApiKeySuccess('')
+      setApiKeyError('Use a valid Gemini key (AIza...), OpenRouter key (sk-or-v1-...), Groq key (gsk_...), or OpenAI key (sk-...).')
+      return
+    }
+
+    const isValid = await validateApiKey(key)
+    if (!isValid) return
+
     localStorage.setItem('careerbot_user_gemini_key', key)
     setUserApiKey(key)
+    setIsApiKeyGateOpen(false)
     setApiKeyError('')
+    setApiKeySuccess('API key saved successfully.')
     setError('')
   }
 
@@ -323,6 +385,8 @@ function App() {
     setApiKeyInput(userApiKey)
     setUserApiKey('')
     localStorage.removeItem('careerbot_user_gemini_key')
+    setIsApiKeyGateOpen(true)
+    setApiKeySuccess('')
     setApiKeyError('Please enter your new API key.')
   }
 
@@ -411,12 +475,14 @@ function App() {
     }
   }
 
-  if (!userApiKey) {
+  const requiresLocalApiKey = isApiKeyGateOpen || (!userApiKey && backendStatus !== 'online')
+
+  if (requiresLocalApiKey) {
     return (
       <div className="api-key-gate" data-theme={theme}>
         <div className="api-key-card">
           <h1>CareerBot Setup</h1>
-          <p>Enter your Gemini or OpenRouter API key to start chatting.</p>
+          <p>Enter your Gemini, OpenAI, OpenRouter, or Groq API key to start chatting, or configure one on the server.</p>
           <form onSubmit={saveApiKey} className="api-key-form">
             <input
               type={showApiKey ? 'text' : 'password'}
@@ -424,20 +490,34 @@ function App() {
               onChange={(e) => {
                 setApiKeyInput(e.target.value)
                 if (apiKeyError) setApiKeyError('')
+                if (apiKeySuccess) setApiKeySuccess('')
               }}
-              placeholder="AIza... or sk-or-v1-..."
+              placeholder="AIza... / sk-... / sk-or-v1-... / gsk_..."
               autoFocus
             />
-            <button
-              type="button"
-              className="api-key-toggle"
-              onClick={() => setShowApiKey(!showApiKey)}
-            >
-              {showApiKey ? 'Hide' : 'Show'}
-            </button>
-            <button type="submit" className="api-key-submit">Start CareerBot</button>
+            <div className="api-key-actions">
+              <button
+                type="button"
+                className="api-key-toggle"
+                onClick={() => setShowApiKey(!showApiKey)}
+              >
+                {showApiKey ? 'Hide' : 'Show'}
+              </button>
+              <button
+                type="button"
+                className="api-key-test"
+                onClick={handleTestApiKey}
+                disabled={isValidatingApiKey || !apiKeyInput.trim()}
+              >
+                {isValidatingApiKey ? 'Testing...' : 'Test API Key'}
+              </button>
+              <button type="submit" className="api-key-submit" disabled={isValidatingApiKey}>
+                {isValidatingApiKey ? 'Validating...' : 'Start CareerBot'}
+              </button>
+            </div>
           </form>
           {apiKeyError && <p className="api-key-error">{apiKeyError}</p>}
+          {apiKeySuccess && <p className="api-key-success">{apiKeySuccess}</p>}
           <p className="api-key-note">Stored only in your browser local storage.</p>
         </div>
       </div>

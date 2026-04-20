@@ -3,6 +3,22 @@ import { isDBConnected, getDB } from '../db/connection.js';
 
 const router = Router();
 const isOpenRouterKey = (key = '') => String(key).trim().startsWith('sk-or-v1-');
+const isGroqKey = (key = '') => String(key).trim().startsWith('gsk_');
+const isOpenAIKey = (key = '') => {
+  const trimmed = String(key).trim();
+  return trimmed.startsWith('sk-') && !trimmed.startsWith('sk-or-v1-');
+};
+const getConfiguredKey = (key = '') => {
+  const trimmed = String(key || '').trim();
+  if (
+    !trimmed
+    || trimmed === 'your_gemini_api_key_here'
+    || trimmed === 'your_openrouter_api_key_here'
+    || trimmed === 'your_groq_api_key_here'
+    || trimmed === 'your_openai_api_key_here'
+  ) return '';
+  return trimmed;
+};
 
 // POST /api/resume/analyze — analyze resume text with AI
 router.post('/analyze', async (req, res) => {
@@ -13,8 +29,12 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Resume text is required' });
     }
 
-    const apiKey = (requestApiKey || process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY || '').trim();
-    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
+    const configuredOpenRouterKey = getConfiguredKey(process.env.OPENROUTER_API_KEY);
+    const configuredGroqKey = getConfiguredKey(process.env.GROQ_API_KEY);
+    const configuredOpenAIKey = getConfiguredKey(process.env.OPENAI_API_KEY);
+    const configuredGeminiKey = getConfiguredKey(process.env.GEMINI_API_KEY);
+    const apiKey = (requestApiKey || configuredOpenRouterKey || configuredGroqKey || configuredOpenAIKey || configuredGeminiKey || '').trim();
+    if (!apiKey) {
       return res.status(500).json({ error: 'Server API key is not configured' });
     }
 
@@ -32,6 +52,8 @@ Resume to analyze:
 ${resumeText}`;
 
     const useOpenRouter = isOpenRouterKey(apiKey);
+    const useGroq = isGroqKey(apiKey);
+    const useOpenAI = isOpenAIKey(apiKey);
 
     let reply = '';
 
@@ -50,9 +72,121 @@ ${resumeText}`;
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        console.error('OpenRouter API Error:', data);
+        const errorMessage = data?.error?.message || data?.message || 'OpenRouter API error';
+        const isQuotaExceeded = response.status === 402 || response.status === 429 || /quota|credit|payment|required|billing/i.test(errorMessage);
+        const isInvalidApiKey = (response.status === 400 || response.status === 401 || response.status === 403)
+          && /invalid|unauthorized|api key|authentication|forbidden/i.test(errorMessage);
+
+        if (isQuotaExceeded || isInvalidApiKey) {
+          if (configuredGroqKey && configuredGroqKey !== apiKey) {
+            const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${configuredGroqKey}`
+              },
+              body: JSON.stringify({
+                model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+                messages: [{ role: 'user', content: prompt }]
+              })
+            });
+
+            const groqData = await groqResponse.json().catch(() => ({}));
+            if (groqResponse.ok) {
+              reply = groqData?.choices?.[0]?.message?.content || '';
+            }
+          }
+
+          if (!reply && configuredOpenAIKey && configuredOpenAIKey !== apiKey) {
+            const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${configuredOpenAIKey}`
+              },
+              body: JSON.stringify({
+                model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+                messages: [{ role: 'user', content: prompt }]
+              })
+            });
+
+            const openAIData = await openAIResponse.json().catch(() => ({}));
+            if (openAIResponse.ok) {
+              reply = openAIData?.choices?.[0]?.message?.content || '';
+            }
+          }
+
+          if (!reply && configuredGeminiKey && configuredGeminiKey !== apiKey) {
+            const geminiResponse = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${configuredGeminiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                })
+              }
+            );
+
+            const geminiData = await geminiResponse.json().catch(() => ({}));
+            if (!geminiResponse.ok) {
+              console.error('Gemini fallback API Error:', geminiData);
+              return res.status(geminiResponse.status).json({
+                error: geminiData?.error?.message || 'Gemini API error'
+              });
+            }
+
+            reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          }
+        } else {
+          console.error('OpenRouter API Error:', data);
+          return res.status(response.status).json({ error: errorMessage });
+        }
+      }
+
+      if (!reply) {
+        reply = data?.choices?.[0]?.message?.content || '';
+      }
+    } else if (useGroq) {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.error('Groq API Error:', data);
         return res.status(response.status).json({
-          error: data?.error?.message || data?.message || 'OpenRouter API error'
+          error: data?.error?.message || data?.message || 'Groq API error'
+        });
+      }
+
+      reply = data?.choices?.[0]?.message?.content || '';
+    } else if (useOpenAI) {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.error('OpenAI API Error:', data);
+        return res.status(response.status).json({
+          error: data?.error?.message || data?.message || 'OpenAI API error'
         });
       }
 

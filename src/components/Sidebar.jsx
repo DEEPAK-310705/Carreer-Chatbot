@@ -173,7 +173,7 @@ function Sidebar({
         )}
         {backendStatus === 'no-key' && (
           <p className="mode-info" style={{ color: 'var(--warning)', marginTop: '6px' }}>
-            Set GEMINI_API_KEY or OPENROUTER_API_KEY in server/.env
+            Set GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY in server/.env
           </p>
         )}
         {backendStatus === 'offline' && (

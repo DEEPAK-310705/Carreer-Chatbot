@@ -59,7 +59,11 @@ app.use('/api/users', usersRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  const keyConfigured = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here';
+  const hasGeminiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here';
+  const hasOpenRouterKey = process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'your_openrouter_api_key_here';
+  const hasGroqKey = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'your_groq_api_key_here';
+  const hasOpenAIKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here';
+  const keyConfigured = Boolean(hasGeminiKey || hasOpenRouterKey || hasGroqKey || hasOpenAIKey);
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -96,7 +100,8 @@ if (!process.env.VERCEL) {
     console.log(`   POST /api/conversations      — Create conversation`);
     console.log(`   POST /api/users/session       — User session`);
     console.log(`   GET  /api/health             — Health check`);
-    console.log(`\n🔑 API Key: ${process.env.GEMINI_API_KEY ? '✓ Configured' : '✗ NOT SET — add GEMINI_API_KEY to .env'}`);
+    const hasAnyKey = Boolean(process.env.GEMINI_API_KEY || process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY);
+    console.log(`\n🔑 API Key: ${hasAnyKey ? '✓ Configured' : '✗ NOT SET — add GEMINI_API_KEY / OPENROUTER_API_KEY / GROQ_API_KEY / OPENAI_API_KEY to .env'}`);
     console.log(`🗄️  Database: ${isDBConnected() ? '✓ Connected' : '✗ NOT CONNECTED — add MONGODB_URI to .env'}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
   });

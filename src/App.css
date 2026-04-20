@@ -218,6 +218,12 @@ body {
   gap: 10px;
 }
 
+.api-key-actions {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 10px;
+}
+
 .api-key-form input {
   width: 100%;
   padding: 12px 14px;
@@ -235,6 +241,7 @@ body {
 }
 
 .api-key-toggle,
+.api-key-test,
 .api-key-submit {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -246,6 +253,17 @@ body {
 .api-key-toggle {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+}
+
+.api-key-test {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.api-key-test:disabled,
+.api-key-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .api-key-submit {
@@ -260,6 +278,11 @@ body {
 
 .api-key-error {
   color: var(--error);
+  margin-top: 8px;
+}
+
+.api-key-success {
+  color: var(--success);
   margin-top: 8px;
 }
 
